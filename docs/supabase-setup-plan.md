@@ -267,6 +267,8 @@ NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 ```
 
+Copy `.env.example` to `.env.local` and fill in the public Supabase URL and anon key for local development. Do not put real secret values in `.env.example`.
+
 Server-only variables should be added only when required by a later backend phase.
 
 ### Preview / Staging
