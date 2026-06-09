@@ -1,4 +1,10 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import {
+  cloneElement,
+  isValidElement,
+  type ButtonHTMLAttributes,
+  type ReactElement,
+  type ReactNode
+} from "react";
 import { cn } from "@/lib/class-names";
 import { focusRing, transitions } from "@/styles/design-tokens";
 
@@ -6,6 +12,7 @@ type ButtonVariant = "primary" | "secondary" | "ghost" | "success" | "danger";
 type ButtonSize = "sm" | "md" | "lg";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  asChild?: boolean;
   children: ReactNode;
   isLoading?: boolean;
   size?: ButtonSize;
@@ -31,6 +38,7 @@ const sizes: Record<ButtonSize, string> = {
 };
 
 export function Button({
+  asChild = false,
   children,
   className,
   disabled,
@@ -40,17 +48,27 @@ export function Button({
   variant = "primary",
   ...props
 }: ButtonProps) {
+  const buttonClassName = cn(
+    "inline-flex items-center justify-center rounded-xl font-medium",
+    "disabled:cursor-not-allowed disabled:opacity-55",
+    focusRing,
+    transitions,
+    variants[variant],
+    sizes[size],
+    className
+  );
+
+  if (asChild && isValidElement<{ className?: string }>(children)) {
+    const child = children as ReactElement<{ className?: string }>;
+
+    return cloneElement(child, {
+      className: cn(buttonClassName, child.props.className)
+    });
+  }
+
   return (
     <button
-      className={cn(
-        "inline-flex items-center justify-center rounded-xl font-medium",
-        "disabled:cursor-not-allowed disabled:opacity-55",
-        focusRing,
-        transitions,
-        variants[variant],
-        sizes[size],
-        className
-      )}
+      className={buttonClassName}
       disabled={disabled || isLoading}
       type={type}
       {...props}
