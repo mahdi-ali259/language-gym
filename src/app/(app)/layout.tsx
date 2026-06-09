@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { signOut } from "@/server/auth/actions";
 
 export default function AppLayout({
   children
@@ -23,6 +24,14 @@ export default function AppLayout({
           <Link href="/practice">Practice</Link>
           <Link href="/progress">Progress</Link>
           <Link href="/settings">Settings</Link>
+          <form action={signOut}>
+            <button
+              className="text-sm text-slate-600 transition hover:text-slate-950"
+              type="submit"
+            >
+              Sign Out
+            </button>
+          </form>
         </nav>
       </header>
       {children}

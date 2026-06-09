@@ -80,6 +80,12 @@ Local development redirect URLs should include:
 http://localhost:3000/auth/callback
 ```
 
+For local testing, also set the app URL in `.env.local`:
+
+```text
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
+
 Production redirect URLs should include the final Vercel production domain:
 
 ```text
@@ -102,6 +108,20 @@ That route should exchange the auth code/session as required by the Supabase aut
 - New profile missing level: `/level`
 - Profile complete: `/dashboard`
 - Auth error: `/sign-in`
+
+### Google Provider Setup Notes
+
+In Supabase Auth provider settings:
+
+1. Enable Google as an OAuth provider.
+2. Add the Google Client ID and Client Secret from Google Cloud Console.
+3. Configure the Supabase callback URL in Google Cloud Console as required by Supabase.
+4. Add the app callback URL to Supabase redirect URLs:
+   - Local: `http://localhost:3000/auth/callback`
+   - Production: `https://YOUR-PRODUCTION-DOMAIN.vercel.app/auth/callback`
+   - Custom domain, if used: `https://YOUR-CUSTOM-DOMAIN.com/auth/callback`
+
+Phase 9 implements sign-in, callback exchange, sign-out, and protected route enforcement only. Profile creation and level persistence remain Phase 10.
 
 ## 4. Storage Setup Plan
 
@@ -265,9 +285,10 @@ Use local `.env.local` values for:
 ```text
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
+NEXT_PUBLIC_SITE_URL
 ```
 
-Copy `.env.example` to `.env.local` and fill in the public Supabase URL and anon key for local development. Do not put real secret values in `.env.example`.
+Copy `.env.example` to `.env.local` and fill in the public Supabase URL, anon key, and local site URL for local development. Do not put real secret values in `.env.example`.
 
 Server-only variables should be added only when required by a later backend phase.
 
