@@ -1,10 +1,5 @@
-import { RoutePlaceholder } from "../../../_components/route-placeholder";
+import { GuestPracticeClient } from "@/features/guest-practice/guest-practice-client";
 
 export default function GuestPracticePage() {
-  return (
-    <RoutePlaceholder
-      title="Guest Practice"
-      description="Placeholder route for the limited first practice experience before sign-in."
-    />
-  );
+  return <GuestPracticeClient />;
 }
