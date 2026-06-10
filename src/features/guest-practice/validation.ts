@@ -1,39 +1,23 @@
-const punctuationPattern = /[.,!?;:'"()[\]{}،؟]/g;
+import {
+  normalizePracticeText,
+  validatePracticeAnswer
+} from "@/lib/practice/validation-engine";
 
-export function normalizePracticeText(value: string) {
-  return value
-    .toLowerCase()
-    .replace(punctuationPattern, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
+export { normalizePracticeText };
 
 export function getPracticeMatchState(target: string, typed: string) {
-  if (!typed) {
-    return {
-      accuracy: 0,
-      isComplete: false,
-      tone: "neutral" as const
-    };
-  }
-
-  const targetCharacters = Array.from(target);
-  const typedCharacters = Array.from(typed);
-  const correctCharacters = typedCharacters.filter(
-    (character, index) => character === targetCharacters[index]
-  ).length;
-  const accuracy = Math.round(
-    (correctCharacters / typedCharacters.length) * 100
-  );
-  const isComplete =
-    typedCharacters.length >= targetCharacters.length && accuracy >= 90;
+  const result = validatePracticeAnswer(target, typed);
 
   return {
-    accuracy: Math.max(0, Math.min(accuracy, 100)),
-    isComplete,
-    tone: isComplete
+    accuracy: result.characterAccuracy,
+    isComplete: result.isCorrectEnough,
+    mistakeSummary: result.mistakeSummary,
+    normalizedTargetText: result.normalizedTargetText,
+    normalizedTypedText: result.normalizedTypedText,
+    wordAccuracy: result.wordAccuracy,
+    tone: result.isCorrectEnough
       ? ("success" as const)
-      : accuracy < 80
+      : result.characterAccuracy < 80
         ? ("warning" as const)
         : ("neutral" as const)
   };
