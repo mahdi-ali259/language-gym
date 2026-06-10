@@ -1,10 +1,5 @@
-import { RoutePlaceholder } from "../../../_components/route-placeholder";
+import { GuestResultPage } from "@/features/guest-result/guest-result-page";
 
-export default function GuestResultPage() {
-  return (
-    <RoutePlaceholder
-      title="Guest Result"
-      description="Placeholder route for the post-guest-session result and sign-in prompt."
-    />
-  );
+export default function GuestResultRoute() {
+  return <GuestResultPage />;
 }
