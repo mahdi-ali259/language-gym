@@ -19,7 +19,11 @@ const authErrorMessages: Record<string, string> = {
   missing_origin:
     "The app could not determine the redirect origin for sign-in.",
   missing_supabase_env:
-    "Supabase environment variables are missing. Add them to your local environment before testing sign-in."
+    "Supabase environment variables are missing. Add them to your local environment before testing sign-in.",
+  profile_setup_failed:
+    "Sign-in worked, but the app could not create or load your profile. Make sure the profiles table and RLS policies are applied.",
+  user_lookup_failed:
+    "The app could not load your signed-in user after the auth callback."
 };
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {

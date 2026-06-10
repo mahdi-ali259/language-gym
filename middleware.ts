@@ -43,6 +43,35 @@ export async function middleware(request: NextRequest) {
     return redirectToSignIn(request);
   }
 
+  const pathname = request.nextUrl.pathname;
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("onboarding_completed_at")
+    .eq("auth_user_id", user.id)
+    .maybeSingle();
+
+  if (profileError) {
+    if (pathname === "/level") {
+      return response;
+    }
+
+    return redirectToLevel(request, "profile_lookup_failed");
+  }
+
+  const onboardingCompleted = Boolean(profile?.onboarding_completed_at);
+
+  if (pathname === "/level") {
+    if (onboardingCompleted) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+
+    return response;
+  }
+
+  if (!onboardingCompleted) {
+    return redirectToLevel(request);
+  }
+
   return response;
 }
 
@@ -58,8 +87,20 @@ function redirectToSignIn(request: NextRequest, reason?: string) {
   return NextResponse.redirect(redirectUrl);
 }
 
+function redirectToLevel(request: NextRequest, reason?: string) {
+  const redirectUrl = request.nextUrl.clone();
+  redirectUrl.pathname = "/level";
+
+  if (reason) {
+    redirectUrl.searchParams.set("setup_error", reason);
+  }
+
+  return NextResponse.redirect(redirectUrl);
+}
+
 export const config = {
   matcher: [
+    "/level",
     "/dashboard/:path*",
     "/progress/:path*",
     "/settings/:path*",
