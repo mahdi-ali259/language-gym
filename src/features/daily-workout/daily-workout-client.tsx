@@ -15,27 +15,29 @@ import {
   moveToNextPracticeSentence,
   recordPracticeTypedText
 } from "@/lib/practice/session";
+import type { PracticeSentence } from "@/lib/practice/session";
 import {
   normalizePracticeText,
   validatePracticeAnswer
 } from "@/lib/practice/validation-engine";
-import { dailyWorkoutSentences } from "./workout-sentences";
 
 const workoutDurationSeconds = 180;
 
 type DailyWorkoutClientProps = {
   displayName: string;
   levelLabel: string;
+  sentences: PracticeSentence[];
 };
 
 export function DailyWorkoutClient({
   displayName,
-  levelLabel
+  levelLabel,
+  sentences
 }: DailyWorkoutClientProps) {
   const [session, setSession] = useState(() =>
     createInitialPracticeSessionState({
       mode: "daily_workout",
-      sentences: dailyWorkoutSentences,
+      sentences,
       type: "time_boxed"
     })
   );
@@ -147,7 +149,7 @@ export function DailyWorkoutClient({
               Three minutes, {displayName}.
             </h1>
             <p className="mt-3 text-sm leading-6 text-slate-500">
-              {levelLabel} · Local workout preview
+              {levelLabel} · Database-backed workout preview
             </p>
           </div>
 

@@ -79,6 +79,113 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      languages: {
+        Row: {
+          code: string;
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          name: string;
+          native_name: string;
+          text_direction: "ltr" | "rtl";
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      sentence_packs: {
+        Row: {
+          access_tier: "free" | "premium";
+          created_at: string;
+          description: string | null;
+          id: string;
+          is_active: boolean;
+          language_pair_id: string;
+          level_id: string | null;
+          slug: string;
+          status: "archived" | "draft" | "published";
+          title: string;
+          topic: string | null;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      sentences: {
+        Row: {
+          created_at: string;
+          difficulty_score: number | null;
+          grammar_tags: string[];
+          id: string;
+          is_active: boolean;
+          language_pair_id: string;
+          level_id: string;
+          normalized_text: string;
+          sentence_pack_id: string | null;
+          status: "archived" | "draft" | "published";
+          text: string;
+          topic_tags: string[];
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      sentence_translations: {
+        Row: {
+          created_at: string;
+          id: string;
+          is_primary: boolean;
+          language_id: string;
+          notes: string | null;
+          sentence_id: string;
+          status: "archived" | "draft" | "published";
+          translated_text: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      sentence_audio_assets: {
+        Row: {
+          bucket_name: string;
+          created_at: string;
+          duration_ms: number | null;
+          id: string;
+          is_primary: boolean;
+          provider: string | null;
+          public_url: string | null;
+          sentence_id: string;
+          status: "archived" | "draft" | "published";
+          storage_path: string;
+          updated_at: string;
+          voice_id: string | null;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      sentence_word_meanings: {
+        Row: {
+          created_at: string;
+          id: string;
+          language_id: string | null;
+          meaning_text: string;
+          notes: string | null;
+          position_end: number | null;
+          position_start: number | null;
+          sentence_id: string;
+          source_text: string;
+          status: "archived" | "draft" | "published";
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       practice_sessions: {
         Row: {
           accuracy_percent: number | null;

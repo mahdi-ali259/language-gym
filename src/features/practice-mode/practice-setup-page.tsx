@@ -23,7 +23,7 @@ export function PracticeSetupPage({ data }: PracticeSetupPageProps) {
           </h1>
           <p className="mt-4 text-base leading-8 text-slate-600">
             Practice Mode is flexible and does not count toward streaks yet.
-            Pick a short local session and focus on clean typing accuracy.
+            Pick a short sentence set and focus on clean typing accuracy.
           </p>
         </div>
 
@@ -78,8 +78,8 @@ function getOptionDescription(count: number) {
   }
 
   if (count === 10) {
-    return "A balanced local practice set for accuracy and rhythm.";
+    return "A balanced practice set for accuracy and rhythm.";
   }
 
-  return "A longer local session for building typing stamina.";
+  return "A longer session for building typing stamina.";
 }
