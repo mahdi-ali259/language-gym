@@ -1,10 +1,10 @@
-import { RoutePlaceholder } from "../../_components/route-placeholder";
+import { DashboardPage } from "@/features/dashboard/dashboard-page";
+import { getDashboardProfileData } from "@/server/dashboard/service";
 
-export default function DashboardPage() {
-  return (
-    <RoutePlaceholder
-      title="Authenticated Dashboard"
-      description="Placeholder route for the future home dashboard and Daily English Workout entry."
-    />
-  );
+export const dynamic = "force-dynamic";
+
+export default async function DashboardRoute() {
+  const data = await getDashboardProfileData();
+
+  return <DashboardPage data={data} />;
 }
