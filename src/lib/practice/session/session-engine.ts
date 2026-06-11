@@ -120,6 +120,20 @@ export function moveToNextPracticeSentence(
   };
 }
 
+export function completePracticeSession(
+  state: PracticeSessionState,
+  now?: string
+): PracticeSessionState {
+  if (state.completedAt) {
+    return state;
+  }
+
+  return {
+    ...state,
+    completedAt: now ?? new Date().toISOString()
+  };
+}
+
 export function isPracticeSessionComplete(state: PracticeSessionState) {
   return Boolean(state.completedAt);
 }

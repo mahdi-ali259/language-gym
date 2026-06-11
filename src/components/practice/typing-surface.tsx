@@ -6,6 +6,7 @@ import { focusRing, transitions } from "@/styles/design-tokens";
 
 type TypingSurfaceProps = {
   currentMeaning?: string;
+  disabled?: boolean;
   onChange: (value: string) => void;
   target: string;
   value: string;
@@ -13,6 +14,7 @@ type TypingSurfaceProps = {
 
 export function TypingSurface({
   currentMeaning,
+  disabled = false,
   onChange,
   target,
   value
@@ -22,11 +24,15 @@ export function TypingSurface({
   const typedCharacters = Array.from(value);
 
   useEffect(() => {
-    inputRef.current?.focus();
-  }, [target]);
+    if (!disabled) {
+      inputRef.current?.focus();
+    }
+  }, [disabled, target]);
 
   function focusInput() {
-    inputRef.current?.focus();
+    if (!disabled) {
+      inputRef.current?.focus();
+    }
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -39,6 +45,7 @@ export function TypingSurface({
     <div
       className={cn(
         "relative cursor-text rounded-[1.75rem] px-1 py-6 sm:px-4 sm:py-8",
+        disabled && "cursor-default opacity-70",
         focusRing,
         transitions
       )}
@@ -53,6 +60,7 @@ export function TypingSurface({
         autoComplete="off"
         autoCorrect="off"
         className="sr-only"
+        disabled={disabled}
         inputMode="text"
         onChange={(event) =>
           onChange(event.target.value.slice(0, target.length))
@@ -73,7 +81,7 @@ export function TypingSurface({
       >
         {targetCharacters.map((character, index) => {
           const typedCharacter = typedCharacters[index];
-          const isCurrent = index === typedCharacters.length;
+          const isCurrent = index === typedCharacters.length && !disabled;
           const isTyped = typedCharacter !== undefined;
           const isCorrect = typedCharacter === character;
 

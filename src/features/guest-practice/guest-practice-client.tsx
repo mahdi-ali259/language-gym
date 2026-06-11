@@ -12,8 +12,8 @@ import {
   recordPracticeTypedText,
   type PracticeSentence
 } from "@/lib/practice/session";
+import { TypingSurface } from "@/components/practice/typing-surface";
 import { guestPracticeSentences } from "./sample-sentences";
-import { TypingSurface } from "./typing-surface";
 import {
   getCurrentWord,
   getPracticeMatchState,

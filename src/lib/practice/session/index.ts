@@ -1,6 +1,7 @@
 export {
   calculatePracticeSessionProgress,
   calculatePracticeSessionResult,
+  completePracticeSession,
   createInitialPracticeSessionState,
   getCurrentPracticeSentence,
   isPracticeSessionComplete,

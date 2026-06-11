@@ -1,10 +1,18 @@
-import { RoutePlaceholder } from "../../../_components/route-placeholder";
+import { DailyWorkoutClient } from "@/features/daily-workout/daily-workout-client";
+import { getDashboardProfileData } from "@/server/dashboard/service";
 
-export default function DailyWorkoutPage() {
+export const dynamic = "force-dynamic";
+
+export default async function DailyWorkoutPage() {
+  const data = await getDashboardProfileData();
+  const levelLabel = data.level
+    ? `${data.level.code} · ${data.level.name}`
+    : "Selected level unavailable";
+
   return (
-    <RoutePlaceholder
-      title="Daily English Workout"
-      description="Placeholder route for the future 3-minute daily workout session."
+    <DailyWorkoutClient
+      displayName={data.displayName}
+      levelLabel={levelLabel}
     />
   );
 }
