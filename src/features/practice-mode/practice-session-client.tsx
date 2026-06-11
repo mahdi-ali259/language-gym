@@ -13,33 +13,32 @@ import {
   getCurrentPracticeSentence,
   isPracticeSessionComplete,
   moveToNextPracticeSentence,
-  recordPracticeTypedText
+  recordPracticeTypedText,
+  type PracticeSentence
 } from "@/lib/practice/session";
 import {
   normalizePracticeText,
   validatePracticeAnswer
 } from "@/lib/practice/validation-engine";
-import { dailyWorkoutSentences } from "./workout-sentences";
 
-const workoutDurationSeconds = 180;
-
-type DailyWorkoutClientProps = {
-  displayName: string;
+type PracticeSessionClientProps = {
+  count: number;
   levelLabel: string;
+  sentences: PracticeSentence[];
 };
 
-export function DailyWorkoutClient({
-  displayName,
-  levelLabel
-}: DailyWorkoutClientProps) {
+export function PracticeSessionClient({
+  count,
+  levelLabel,
+  sentences
+}: PracticeSessionClientProps) {
   const [session, setSession] = useState(() =>
     createInitialPracticeSessionState({
-      mode: "daily_workout",
-      sentences: dailyWorkoutSentences,
-      type: "time_boxed"
+      mode: "practice",
+      sentences,
+      type: "sentence_count"
     })
   );
-  const [timeRemaining, setTimeRemaining] = useState(workoutDurationSeconds);
   const [audioMessage, setAudioMessage] = useState(
     "Audio preview is visual only."
   );
@@ -66,7 +65,7 @@ export function DailyWorkoutClient({
     ? currentSentence?.wordMeanings?.[normalizePracticeText(currentWord)]
     : undefined;
 
-  const finishWorkout = useCallback(() => {
+  const finishPractice = useCallback(() => {
     setSession((currentSession) => completePracticeSession(currentSession));
   }, []);
 
@@ -74,26 +73,6 @@ export function DailyWorkoutClient({
     setSession((currentSession) => moveToNextPracticeSentence(currentSession));
     setAudioMessage("Audio preview is visual only.");
   }, []);
-
-  useEffect(() => {
-    if (isFinished) {
-      return;
-    }
-
-    const interval = window.setInterval(() => {
-      setTimeRemaining((seconds) => {
-        if (seconds <= 1) {
-          window.clearInterval(interval);
-          finishWorkout();
-          return 0;
-        }
-
-        return seconds - 1;
-      });
-    }, 1000);
-
-    return () => window.clearInterval(interval);
-  }, [finishWorkout, isFinished]);
 
   useEffect(() => {
     if (!matchState.isCorrectEnough || isFinished) {
@@ -117,22 +96,12 @@ export function DailyWorkoutClient({
     setAudioMessage("Audio placeholder clicked. Real playback comes later.");
   }
 
-  if (!currentSentence) {
+  if (!currentSentence || isFinished) {
     return (
-      <DailyWorkoutResult
+      <PracticeSessionResult
+        count={count}
         levelLabel={levelLabel}
         result={result}
-        timeRemaining={timeRemaining}
-      />
-    );
-  }
-
-  if (isFinished) {
-    return (
-      <DailyWorkoutResult
-        levelLabel={levelLabel}
-        result={result}
-        timeRemaining={timeRemaining}
       />
     );
   }
@@ -140,23 +109,20 @@ export function DailyWorkoutClient({
   return (
     <main className="mx-auto flex min-h-[78vh] w-full max-w-6xl flex-col justify-center px-4 py-8 sm:px-6 sm:py-12">
       <div className="mx-auto w-full max-w-5xl">
-        <div className="mb-8 grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <Badge tone="accent">Daily English Workout</Badge>
+            <Badge tone="accent">Practice Mode</Badge>
             <h1 className="mt-4 text-3xl font-semibold text-slate-950 sm:text-4xl">
-              Three minutes, {displayName}.
+              {count}-sentence practice.
             </h1>
             <p className="mt-3 text-sm leading-6 text-slate-500">
-              {levelLabel} · Local workout preview
+              {levelLabel} · Does not count toward streaks
             </p>
           </div>
 
-          <div className="rounded-2xl border border-white/75 bg-white/70 px-5 py-4 text-left shadow-sm backdrop-blur">
-            <p className="text-sm font-medium text-slate-500">Time remaining</p>
-            <p className="mt-1 text-3xl font-semibold text-slate-950">
-              {formatTime(timeRemaining)}
-            </p>
-          </div>
+          <Button asChild variant="secondary">
+            <Link href="/practice">Change count</Link>
+          </Button>
         </div>
 
         <GlassPanel>
@@ -208,7 +174,7 @@ export function DailyWorkoutClient({
             >
               Clear
             </Button>
-            <Button onClick={finishWorkout} size="sm" variant="ghost">
+            <Button onClick={finishPractice} size="sm" variant="ghost">
               Finish
             </Button>
           </div>
@@ -222,43 +188,44 @@ export function DailyWorkoutClient({
   );
 }
 
-function DailyWorkoutResult({
+function PracticeSessionResult({
+  count,
   levelLabel,
-  result,
-  timeRemaining
+  result
 }: {
+  count: number;
   levelLabel: string;
   result: ReturnType<typeof calculatePracticeSessionResult>;
-  timeRemaining: number;
 }) {
   return (
     <main className="mx-auto flex min-h-[78vh] w-full max-w-5xl flex-col justify-center px-4 py-8 sm:px-6 sm:py-12">
       <GlassPanel>
-        <Badge tone="success">Workout complete</Badge>
+        <Badge tone="success">Practice complete</Badge>
         <div className="mt-5 grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <section>
             <h1 className="text-3xl font-semibold text-slate-950 sm:text-5xl">
-              Nice daily reps.
+              Practice set finished.
             </h1>
             <p className="mt-4 text-base leading-8 text-slate-600">
-              This result is local only for now. Persistence, streak updates,
-              and progress summaries will come in later phases.
+              This local Practice Mode result is not saved yet and does not
+              count toward streaks. Persistence and progress summaries come
+              later.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg">
-                <Link href="/dashboard">Back to Dashboard</Link>
+                <Link href="/practice">Practice Again</Link>
               </Button>
               <Button asChild size="lg" variant="secondary">
-                <Link href="/progress">View Progress</Link>
+                <Link href="/dashboard">Back to Dashboard</Link>
               </Button>
             </div>
           </section>
 
           <section className="grid gap-4 sm:grid-cols-2">
+            <ResultMetric label="Selected set" value={`${count} sentences`} />
             <ResultMetric label="Level" value={levelLabel} />
-            <ResultMetric label="Time left" value={formatTime(timeRemaining)} />
             <ResultMetric
-              label="Sentences completed"
+              label="Completed"
               value={`${result.completedSentences}/${result.totalSentences}`}
             />
             <ResultMetric
@@ -273,8 +240,8 @@ function DailyWorkoutResult({
                 {result.mistakeCount}
               </p>
               <p className="mt-3 text-sm leading-6 text-slate-500">
-                Future versions will save repeated mistakes and weak words after
-                each authenticated workout.
+                Future persistence will connect these results to weak words and
+                progress tracking.
               </p>
             </Card>
           </section>
@@ -291,11 +258,4 @@ function ResultMetric({ label, value }: { label: string; value: string }) {
       <p className="mt-2 text-3xl font-semibold text-slate-950">{value}</p>
     </Card>
   );
-}
-
-function formatTime(totalSeconds: number) {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }

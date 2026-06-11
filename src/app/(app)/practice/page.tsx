@@ -1,10 +1,10 @@
-import { RoutePlaceholder } from "../../_components/route-placeholder";
+import { PracticeSetupPage } from "@/features/practice-mode/practice-setup-page";
+import { getDashboardProfileData } from "@/server/dashboard/service";
 
-export default function PracticeModeSetupPage() {
-  return (
-    <RoutePlaceholder
-      title="Practice Mode Setup"
-      description="Placeholder route for selecting sentence count, level, and practice options."
-    />
-  );
+export const dynamic = "force-dynamic";
+
+export default async function PracticeModeSetupRoute() {
+  const data = await getDashboardProfileData();
+
+  return <PracticeSetupPage data={data} />;
 }
