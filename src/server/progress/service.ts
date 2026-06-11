@@ -8,6 +8,10 @@ import {
   getProgressAggregation,
   type ProgressAggregationDto
 } from "@/server/progress/aggregation";
+import {
+  getWeaknessDetection,
+  type WeaknessDetectionDto
+} from "@/server/progress/weakness";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import type { Database } from "@/types/database";
 
@@ -23,6 +27,7 @@ export type ProgressPageData = {
     id: string;
     onboardingCompletedAt: string | null;
   };
+  weakness: WeaknessDetectionDto;
 };
 
 export async function getProgressPageData(): Promise<ProgressPageData> {
@@ -33,14 +38,15 @@ export async function getProgressPageData(): Promise<ProgressPageData> {
     redirect("/level");
   }
 
-  const [level, languagePair, aggregation] = await Promise.all([
+  const [level, languagePair, aggregation, weakness] = await Promise.all([
     profile.selected_level_id
       ? getLevelById(profile.selected_level_id)
       : Promise.resolve(null),
     profile.selected_language_pair_id
       ? getLanguagePairById(profile.selected_language_pair_id)
       : Promise.resolve(null),
-    getProgressAggregation()
+    getProgressAggregation(),
+    getWeaknessDetection()
   ]);
 
   return {
@@ -51,7 +57,8 @@ export async function getProgressPageData(): Promise<ProgressPageData> {
     profile: {
       id: profile.id,
       onboardingCompletedAt: profile.onboarding_completed_at
-    }
+    },
+    weakness
   };
 }
 

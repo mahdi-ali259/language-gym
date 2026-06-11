@@ -142,16 +142,8 @@ export function ProgressPage({ data }: ProgressPageProps) {
       </section>
 
       <section className="mt-5 grid gap-5 md:grid-cols-2">
-        <ComingLaterCard
-          label="Weak words"
-          title="Weak words coming later"
-          description="This remains placeholder-only until the weakness detection phase defines reliable word scoring."
-        />
-        <ComingLaterCard
-          label="Progress DNA"
-          title="Progress DNA coming later"
-          description="The fuller learning profile dashboard is deferred until the approved roadmap reaches analytics."
-        />
+        <WeakWordsCard data={data.weakness} />
+        <RepeatedMistakesCard data={data.weakness} />
       </section>
     </main>
   );
@@ -249,21 +241,122 @@ function SmallStat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ComingLaterCard({
-  description,
-  label,
-  title
-}: {
-  description: string;
-  label: string;
-  title: string;
-}) {
+function WeakWordsCard({ data }: { data: ProgressPageData["weakness"] }) {
+  const hasWeakWords = data.weakWords.length > 0;
+
   return (
     <Card className="bg-white/75">
-      <Badge>{label}</Badge>
-      <h2 className="mt-4 text-xl font-semibold text-slate-950">{title}</h2>
-      <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-sm font-medium text-slate-500">Weak words</p>
+          <h2 className="mt-2 text-xl font-semibold text-slate-950">
+            Repeated word mistakes
+          </h2>
+        </div>
+        <Badge>{formatStatus(data.status)}</Badge>
+      </div>
+
+      {hasWeakWords ? (
+        <div className="mt-5 space-y-3">
+          {data.weakWords.map((word) => (
+            <WeakWordRow key={word.wordText} word={word} />
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          className="mt-5"
+          description="Weak words will appear after enough saved mistakes exist."
+          title="No weak words detected yet"
+        />
+      )}
+
+      <p className="mt-4 text-sm leading-6 text-slate-500">
+        {data.recentMistakeSummary.note}
+      </p>
     </Card>
+  );
+}
+
+function RepeatedMistakesCard({
+  data
+}: {
+  data: ProgressPageData["weakness"];
+}) {
+  const hasMistakeTypes = data.repeatedMistakeTypes.length > 0;
+
+  return (
+    <Card className="bg-white/75">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-sm font-medium text-slate-500">
+            Repeated mistake types
+          </p>
+          <h2 className="mt-2 text-xl font-semibold text-slate-950">
+            Simple mistake patterns
+          </h2>
+        </div>
+        <Badge>{data.recentMistakeSummary.totalMistakesInWindow} recent</Badge>
+      </div>
+
+      {hasMistakeTypes ? (
+        <div className="mt-5 space-y-3">
+          {data.repeatedMistakeTypes.map((mistake) => (
+            <RepeatedMistakeTypeRow
+              key={mistake.mistakeType}
+              mistake={mistake}
+            />
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          className="mt-5"
+          description="Mistake type patterns need saved attempts before they can appear."
+          title="No repeated mistake types yet"
+        />
+      )}
+    </Card>
+  );
+}
+
+function WeakWordRow({
+  word
+}: {
+  word: ProgressPageData["weakness"]["weakWords"][number];
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-base font-semibold text-slate-950">
+          {word.wordText}
+        </p>
+        <Badge>{word.mostCommonMistakeType.replace("_", " ")}</Badge>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <SmallStat label="Mistakes" value={String(word.mistakeCount)} />
+        <SmallStat label="Last seen" value={formatDate(word.lastSeenAt)} />
+      </div>
+    </div>
+  );
+}
+
+function RepeatedMistakeTypeRow({
+  mistake
+}: {
+  mistake: ProgressPageData["weakness"]["repeatedMistakeTypes"][number];
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-base font-semibold capitalize text-slate-950">
+          {mistake.mistakeType.replace("_", " ")}
+        </p>
+        <Badge>{mistake.status}</Badge>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <SmallStat label="Count" value={String(mistake.mistakeCount)} />
+        <SmallStat label="Last seen" value={formatDate(mistake.lastSeenAt)} />
+      </div>
+    </div>
   );
 }
 
@@ -276,4 +369,12 @@ function formatDate(value: string) {
 
 function formatMetricValue(value: number | null) {
   return value === null ? "--" : String(value);
+}
+
+function formatStatus(status: ProgressPageData["weakness"]["status"]) {
+  if (status === "placeholder") {
+    return "No data yet";
+  }
+
+  return status;
 }
