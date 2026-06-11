@@ -12,7 +12,14 @@ export function ProgressPage({ data }: ProgressPageProps) {
     : "Level not selected";
   const languagePairLabel =
     data.languagePair?.display_name ?? "Language pair not selected";
-  const hasRecentSessions = data.recentSessions.length > 0;
+  const hasRecentSessions = data.aggregation.recentSessions.length > 0;
+  const totalSentencesLabel = formatMetricValue(
+    data.aggregation.totalSentencesCompleted.value
+  );
+  const averageAccuracyLabel =
+    data.aggregation.averageAccuracy.value === null
+      ? "--"
+      : `${data.aggregation.averageAccuracy.value}%`;
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
@@ -51,24 +58,24 @@ export function ProgressPage({ data }: ProgressPageProps) {
 
       <section className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
         <ProgressMetric
-          label="Current level"
-          note="Read from your profile."
-          value={levelLabel}
+          label="Saved sessions"
+          note={data.aggregation.totalSessions.note}
+          value={formatMetricValue(data.aggregation.totalSessions.value)}
         />
         <ProgressMetric
-          label="Language pair"
-          note="Read from your profile."
-          value={languagePairLabel}
+          label="Recent mistakes"
+          note={data.aggregation.totalMistakeCount.note}
+          value={formatMetricValue(data.aggregation.totalMistakeCount.value)}
         />
         <ProgressMetric
           label="Total sentences"
-          note="Progress summaries will power this later."
-          value="--"
+          note={data.aggregation.totalSentencesCompleted.note}
+          value={totalSentencesLabel}
         />
         <ProgressMetric
           label="Average accuracy"
-          note="Analytics are intentionally deferred."
-          value="--"
+          note={data.aggregation.averageAccuracy.note}
+          value={averageAccuracyLabel}
         />
       </section>
 
@@ -88,7 +95,7 @@ export function ProgressPage({ data }: ProgressPageProps) {
 
           {hasRecentSessions ? (
             <div className="mt-5 space-y-3">
-              {data.recentSessions.map((session) => (
+              {data.aggregation.recentSessions.map((session) => (
                 <RecentSessionRow key={session.id} session={session} />
               ))}
             </div>
@@ -112,13 +119,15 @@ export function ProgressPage({ data }: ProgressPageProps) {
               </h2>
             </div>
             <Badge>
-              {data.recentMistakes.length > 0 ? "Latest 5" : "Empty"}
+              {data.aggregation.recentMistakes.length > 0
+                ? "Latest 5"
+                : "Empty"}
             </Badge>
           </div>
 
-          {data.recentMistakes.length > 0 ? (
+          {data.aggregation.recentMistakes.length > 0 ? (
             <div className="mt-5 space-y-3">
-              {data.recentMistakes.map((mistake) => (
+              {data.aggregation.recentMistakes.map((mistake) => (
                 <RecentMistakeRow key={mistake.id} mistake={mistake} />
               ))}
             </div>
@@ -178,22 +187,22 @@ function ProgressMetric({
 function RecentSessionRow({
   session
 }: {
-  session: ProgressPageData["recentSessions"][number];
+  session: ProgressPageData["aggregation"]["recentSessions"][number];
 }) {
   const accuracyLabel =
-    session.accuracy_percent === null
+    session.accuracyPercent === null
       ? "--"
-      : `${Math.round(session.accuracy_percent)}%`;
+      : `${Math.round(session.accuracyPercent)}%`;
 
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-base font-semibold capitalize text-slate-950">
-            {session.session_type.replace("_", " ")}
+            {session.sessionType.replace("_", " ")}
           </p>
           <p className="mt-1 text-sm text-slate-500">
-            {formatDate(session.completed_at ?? session.started_at)}
+            {formatDate(session.completedAt ?? session.startedAt)}
           </p>
         </div>
         <Badge tone={session.status === "completed" ? "success" : "neutral"}>
@@ -203,7 +212,7 @@ function RecentSessionRow({
       <div className="mt-4 grid grid-cols-2 gap-3">
         <SmallStat
           label="Sentences"
-          value={String(session.sentences_completed)}
+          value={String(session.sentencesCompleted)}
         />
         <SmallStat label="Accuracy" value={accuracyLabel} />
       </div>
@@ -214,19 +223,18 @@ function RecentSessionRow({
 function RecentMistakeRow({
   mistake
 }: {
-  mistake: ProgressPageData["recentMistakes"][number];
+  mistake: ProgressPageData["aggregation"]["recentMistakes"][number];
 }) {
-  const wordLabel =
-    mistake.word_text ?? mistake.expected_text ?? "Unknown word";
+  const wordLabel = mistake.wordText ?? mistake.expectedText ?? "Unknown word";
 
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-base font-semibold text-slate-950">{wordLabel}</p>
-        <Badge>{mistake.mistake_type.replace("_", " ")}</Badge>
+        <Badge>{mistake.mistakeType.replace("_", " ")}</Badge>
       </div>
       <p className="mt-2 text-sm text-slate-500">
-        {formatDate(mistake.created_at)}
+        {formatDate(mistake.createdAt)}
       </p>
     </div>
   );
@@ -264,4 +272,8 @@ function formatDate(value: string) {
     dateStyle: "medium",
     timeStyle: "short"
   }).format(new Date(value));
+}
+
+function formatMetricValue(value: number | null) {
+  return value === null ? "--" : String(value);
 }

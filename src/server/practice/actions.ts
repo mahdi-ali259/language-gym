@@ -5,14 +5,14 @@ import { savePracticeSessionResult } from "@/server/practice/persistence";
 
 export type SaveResultActionState =
   | {
-    message: string;
-    practiceSessionId: string;
-    status: "saved";
-  }
+      message: string;
+      practiceSessionId: string;
+      status: "saved";
+    }
   | {
-    message: string;
-    status: "failed";
-  };
+      message: string;
+      status: "failed";
+    };
 
 const dailyWorkoutDurationSeconds = 180;
 
