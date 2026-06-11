@@ -3,6 +3,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button } from "@/components/ui";
+import {
+  calculatePracticeSessionProgress,
+  createInitialPracticeSessionState,
+  getCurrentPracticeSentence,
+  isPracticeSessionComplete,
+  moveToNextPracticeSentence,
+  recordPracticeTypedText,
+  type PracticeSentence
+} from "@/lib/practice/session";
 import { guestPracticeSentences } from "./sample-sentences";
 import { TypingSurface } from "./typing-surface";
 import {
@@ -13,39 +22,55 @@ import {
 
 export function GuestPracticeClient() {
   const router = useRouter();
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [typedText, setTypedText] = useState("");
+  const [session, setSession] = useState(() =>
+    createInitialPracticeSessionState({
+      mode: "guest",
+      sentences: getGuestPracticeSessionSentences(),
+      type: "sentence_count"
+    })
+  );
   const [audioMessage, setAudioMessage] = useState(
     "Audio preview is visual only."
   );
 
-  const currentSentence = guestPracticeSentences[currentIndex];
-  const progressLabel = `${currentIndex + 1} of ${guestPracticeSentences.length}`;
-  const progressPercent =
-    ((currentIndex + 1) / guestPracticeSentences.length) * 100;
+  const currentSentence = getCurrentPracticeSentence(session);
+  const typedText = currentSentence
+    ? (session.typedTextBySentenceId[currentSentence.id] ?? "")
+    : "";
+  const progress = calculatePracticeSessionProgress(session);
+  const progressLabel = `${progress.currentPosition} of ${progress.totalSentences}`;
   const matchState = useMemo(
-    () => getPracticeMatchState(currentSentence.english, typedText),
-    [currentSentence.english, typedText]
+    () => getPracticeMatchState(currentSentence?.targetText ?? "", typedText),
+    [currentSentence?.targetText, typedText]
   );
-  const currentWord = getCurrentWord(currentSentence.english, typedText.length);
+  const currentWord = getCurrentWord(
+    currentSentence?.targetText ?? "",
+    typedText.length
+  );
   const currentMeaning = currentWord
-    ? currentSentence.wordMeanings?.[normalizePracticeText(currentWord)]
+    ? currentSentence?.wordMeanings?.[normalizePracticeText(currentWord)]
     : undefined;
 
   function handleAudioMock() {
     setAudioMessage("Audio placeholder clicked. Real playback comes later.");
   }
 
-  const handleNext = useCallback(() => {
-    if (currentIndex >= guestPracticeSentences.length - 1) {
-      router.push("/guest/result");
-      return;
-    }
+  function handleTypedTextChange(value: string) {
+    setSession((currentSession) =>
+      recordPracticeTypedText(currentSession, value)
+    );
+  }
 
-    setCurrentIndex((index) => index + 1);
-    setTypedText("");
+  const handleNext = useCallback(() => {
+    const nextSession = moveToNextPracticeSentence(session);
+
+    setSession(nextSession);
     setAudioMessage("Audio preview is visual only.");
-  }, [currentIndex, router]);
+
+    if (isPracticeSessionComplete(nextSession)) {
+      router.push("/guest/result");
+    }
+  }, [router, session]);
 
   useEffect(() => {
     if (!matchState.isComplete) {
@@ -59,6 +84,10 @@ export function GuestPracticeClient() {
     return () => window.clearTimeout(timeout);
   }, [handleNext, matchState.isComplete]);
 
+  if (!currentSentence) {
+    return null;
+  }
+
   return (
     <main className="mx-auto flex min-h-[78vh] w-full max-w-5xl flex-col justify-center px-4 py-8 text-center sm:px-6 sm:py-12">
       <div className="mx-auto w-full max-w-4xl">
@@ -70,19 +99,21 @@ export function GuestPracticeClient() {
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200/80">
               <div
                 className="h-full rounded-full bg-blue-600 transition-all duration-300"
-                style={{ width: `${progressPercent}%` }}
+                style={{ width: `${progress.percent}%` }}
               />
             </div>
           </div>
-          <Badge tone={currentSentence.level === "A1" ? "accent" : "neutral"}>
-            {currentSentence.level}
+          <Badge
+            tone={currentSentence.levelCode === "A1" ? "accent" : "neutral"}
+          >
+            {currentSentence.levelCode}
           </Badge>
         </div>
 
         <TypingSurface
           currentMeaning={currentMeaning}
-          onChange={setTypedText}
-          target={currentSentence.english}
+          onChange={handleTypedTextChange}
+          target={currentSentence.targetText}
           value={typedText}
         />
 
@@ -90,7 +121,7 @@ export function GuestPracticeClient() {
           className="mx-auto mt-5 max-w-2xl text-center text-xl leading-9 text-slate-600 sm:text-2xl"
           dir="rtl"
         >
-          {currentSentence.arabicTranslation}
+          {currentSentence.translationText}
         </p>
 
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -101,7 +132,7 @@ export function GuestPracticeClient() {
             Accuracy {matchState.accuracy}%
           </span>
           <Button
-            onClick={() => setTypedText("")}
+            onClick={() => handleTypedTextChange("")}
             size="sm"
             variant="ghost"
             disabled={!typedText || matchState.isComplete}
@@ -114,4 +145,14 @@ export function GuestPracticeClient() {
       </div>
     </main>
   );
+}
+
+function getGuestPracticeSessionSentences(): PracticeSentence[] {
+  return guestPracticeSentences.map((sentence) => ({
+    id: sentence.id,
+    levelCode: sentence.level,
+    targetText: sentence.english,
+    translationText: sentence.arabicTranslation,
+    wordMeanings: sentence.wordMeanings
+  }));
 }
