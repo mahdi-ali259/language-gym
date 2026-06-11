@@ -102,13 +102,13 @@ export async function savePracticeSessionResult({
   if (attemptsError) {
     throw new Error(attemptsError.message);
   }
- // TODO:
-// This currently assumes Supabase returns inserted
-// sentence_attempts in the same order they were inserted.
-//
-// Future hardening should introduce a correlation key
-// (client_attempt_index or similar) and map mistakes
-// using that identifier instead of relying on return order.
+  // TODO:
+  // This currently assumes Supabase returns inserted
+  // sentence_attempts in the same order they were inserted.
+  //
+  // Future hardening should introduce a correlation key
+  // (client_attempt_index or similar) and map mistakes
+  // using that identifier instead of relying on return order.
 
   const mistakes = savedAttempts.flatMap((attempt, attemptIndex) =>
     records.mistakesByAttemptIndex[attemptIndex].map((mistake) => ({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, Card, GlassPanel } from "@/components/ui";
 import { TypingSurface } from "@/components/practice/typing-surface";
@@ -20,6 +20,10 @@ import {
   normalizePracticeText,
   validatePracticeAnswer
 } from "@/lib/practice/validation-engine";
+import {
+  saveDailyWorkoutResult,
+  type SaveResultActionState
+} from "@/server/practice/actions";
 
 const workoutDurationSeconds = 180;
 
@@ -233,6 +237,29 @@ function DailyWorkoutResult({
   result: ReturnType<typeof calculatePracticeSessionResult>;
   timeRemaining: number;
 }) {
+  const saveStartedRef = useRef(false);
+  const [saveState, setSaveState] = useState<
+    SaveResultActionState | { status: "idle" | "saving"; message: string }
+  >({
+    message: "Save this authenticated workout when you are ready.",
+    status: "idle"
+  });
+
+  async function handleSaveResult() {
+    if (saveStartedRef.current || saveState.status === "saved") {
+      return;
+    }
+
+    saveStartedRef.current = true;
+    setSaveState({ message: "Saving result...", status: "saving" });
+    const nextSaveState = await saveDailyWorkoutResult(result);
+    setSaveState(nextSaveState);
+
+    if (nextSaveState.status === "failed") {
+      saveStartedRef.current = false;
+    }
+  }
+
   return (
     <main className="mx-auto flex min-h-[78vh] w-full max-w-5xl flex-col justify-center px-4 py-8 sm:px-6 sm:py-12">
       <GlassPanel>
@@ -243,10 +270,23 @@ function DailyWorkoutResult({
               Nice daily reps.
             </h1>
             <p className="mt-4 text-base leading-8 text-slate-600">
-              This result is local only for now. Persistence, streak updates,
-              and progress summaries will come in later phases.
+              Save this raw workout result now. Streak updates and progress
+              summaries will come in later phases.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <Button
+                disabled={
+                  saveState.status === "saving" || saveState.status === "saved"
+                }
+                onClick={handleSaveResult}
+                size="lg"
+              >
+                {saveState.status === "saving"
+                  ? "Saving..."
+                  : saveState.status === "saved"
+                    ? "Saved"
+                    : "Save Result"}
+              </Button>
               <Button asChild size="lg">
                 <Link href="/dashboard">Back to Dashboard</Link>
               </Button>
@@ -254,6 +294,7 @@ function DailyWorkoutResult({
                 <Link href="/progress">View Progress</Link>
               </Button>
             </div>
+            <SaveStatusMessage state={saveState} />
           </section>
 
           <section className="grid gap-4 sm:grid-cols-2">
@@ -283,6 +324,25 @@ function DailyWorkoutResult({
         </div>
       </GlassPanel>
     </main>
+  );
+}
+
+function SaveStatusMessage({
+  state
+}: {
+  state: SaveResultActionState | { status: "idle" | "saving"; message: string };
+}) {
+  const toneClassName =
+    state.status === "saved"
+      ? "border-emerald-100 bg-emerald-50/80 text-emerald-700"
+      : state.status === "failed"
+        ? "border-rose-100 bg-rose-50/80 text-rose-600"
+        : "border-blue-100 bg-blue-50/80 text-blue-700";
+
+  return (
+    <p className={`mt-4 rounded-2xl border p-4 text-sm ${toneClassName}`}>
+      {state.message}
+    </p>
   );
 }
 
