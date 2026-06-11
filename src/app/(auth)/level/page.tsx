@@ -61,7 +61,8 @@ export default async function LevelSelectionPage({
 
   const { languagePair, levels } = setupData;
   const errorMessage = setupError
-    ? (setupErrorMessages[setupError] ?? setupError)
+    ? (setupErrorMessages[setupError] ??
+      "The setup page needs attention. Please try again.")
     : null;
 
   return (
@@ -144,12 +145,9 @@ export default async function LevelSelectionPage({
 async function loadProfileSetup() {
   try {
     return await ensureCurrentProfile();
-  } catch (error) {
+  } catch {
     return {
-      error:
-        error instanceof Error
-          ? error.message
-          : "The profile setup page could not load."
+      error: "The profile setup page could not load."
     };
   }
 }
@@ -162,12 +160,9 @@ async function loadLevelSetup() {
     ]);
 
     return { languagePair, levels };
-  } catch (error) {
+  } catch {
     return {
-      error:
-        error instanceof Error
-          ? error.message
-          : "The level setup data could not load."
+      error: "The level setup data could not load."
     };
   }
 }

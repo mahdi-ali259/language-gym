@@ -17,6 +17,10 @@ type SentenceAttemptInsert =
   Database["public"]["Tables"]["sentence_attempts"]["Insert"];
 type AttemptMistakeInsert =
   Database["public"]["Tables"]["attempt_mistakes"]["Insert"];
+type SentenceRow = Pick<
+  Database["public"]["Tables"]["sentences"]["Row"],
+  "id" | "is_active" | "language_pair_id" | "level_id" | "status"
+>;
 type PendingSentenceAttemptInsert = Omit<
   SentenceAttemptInsert,
   "practice_session_id"
@@ -71,6 +75,23 @@ export async function savePracticeSessionResult({
     throw new Error("Practice results require a selected language pair.");
   }
 
+  if (!profile.selected_level_id) {
+    throw new Error("Practice results require a selected level.");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const persistedSentenceIds = getPersistedSentenceIds({
+    result,
+    sentenceIdByLocalId
+  });
+
+  await verifyPersistedSentenceAccess({
+    languagePairId: profile.selected_language_pair_id,
+    levelId: profile.selected_level_id,
+    sentenceIds: persistedSentenceIds,
+    supabase
+  });
+
   const records = mapPracticeSessionResultToRecords({
     languagePairId: profile.selected_language_pair_id,
     levelId: profile.selected_level_id,
@@ -79,7 +100,6 @@ export async function savePracticeSessionResult({
     sentenceIdByLocalId,
     targetDurationSeconds
   });
-  const supabase = await createSupabaseServerClient();
   const { data: savedSession, error: sessionError } = await supabase
     .from("practice_sessions")
     .insert(records.session)
@@ -237,6 +257,20 @@ function assertPersistableSessionMode(
   }
 }
 
+function getPersistedSentenceIds({
+  result,
+  sentenceIdByLocalId
+}: {
+  result: PracticeSessionResult;
+  sentenceIdByLocalId?: Record<string, string>;
+}) {
+  const sentenceIds = result.attempts.map((attempt) =>
+    getPersistedSentenceId(attempt, sentenceIdByLocalId)
+  );
+
+  return Array.from(new Set(sentenceIds));
+}
+
 function getPersistedSentenceId(
   attempt: PracticeAttemptResult,
   sentenceIdByLocalId?: Record<string, string>
@@ -251,6 +285,55 @@ function getPersistedSentenceId(
   }
 
   return sentenceId;
+}
+
+// TODO:
+// This currently restricts saved results to the user's selected profile level.
+// Future flows that allow mixed-level practice, review sessions, or explicit
+// level selection should pass the intended session level/context into the
+// persistence boundary and verify against that context instead.
+
+async function verifyPersistedSentenceAccess({
+  languagePairId,
+  levelId,
+  sentenceIds,
+  supabase
+}: {
+  languagePairId: string;
+  levelId: string;
+  sentenceIds: string[];
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
+}) {
+  if (sentenceIds.length === 0) {
+    throw new Error("Practice results must include at least one sentence.");
+  }
+
+  const { data, error } = await supabase
+    .from("sentences")
+    .select("id, is_active, language_pair_id, level_id, status")
+    .in("id", sentenceIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const allowedSentenceIds = new Set(
+    (data satisfies SentenceRow[])
+      .filter(
+        (sentence) =>
+          sentence.is_active &&
+          sentence.status === "published" &&
+          sentence.language_pair_id === languagePairId &&
+          sentence.level_id === levelId
+      )
+      .map((sentence) => sentence.id)
+  );
+
+  if (allowedSentenceIds.size !== sentenceIds.length) {
+    throw new Error(
+      "Practice results include sentences outside the current learner context."
+    );
+  }
 }
 
 function getDurationSeconds(startedAt: string, completedAt: string) {

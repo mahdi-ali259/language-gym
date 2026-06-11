@@ -25,13 +25,15 @@ const authErrorMessages: Record<string, string> = {
   user_lookup_failed:
     "The app could not load your signed-in user after the auth callback."
 };
+const fallbackAuthErrorMessage =
+  "Sign-in could not be completed. Please try again.";
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
   const params = await searchParams;
   const authError = params?.auth_error;
-  const redirectedFrom = params?.redirectedFrom;
+  const redirectedFrom = normalizeDisplayedRedirectPath(params?.redirectedFrom);
   const errorMessage = authError
-    ? (authErrorMessages[authError] ?? authError)
+    ? (authErrorMessages[authError] ?? fallbackAuthErrorMessage)
     : null;
 
   return (
@@ -75,4 +77,22 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
       </GlassPanel>
     </main>
   );
+}
+
+function normalizeDisplayedRedirectPath(value?: string) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(value, "http://app.local");
+
+    if (parsed.origin !== "http://app.local") {
+      return null;
+    }
+
+    return parsed.pathname;
+  } catch {
+    return null;
+  }
 }
