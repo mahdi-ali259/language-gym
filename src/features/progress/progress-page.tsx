@@ -13,13 +13,12 @@ export function ProgressPage({ data }: ProgressPageProps) {
   const languagePairLabel =
     data.languagePair?.display_name ?? "Language pair not selected";
   const hasRecentSessions = data.aggregation.recentSessions.length > 0;
-  const totalSentencesLabel = formatMetricValue(
-    data.aggregation.totalSentencesCompleted.value
-  );
-  const averageAccuracyLabel =
-    data.aggregation.averageAccuracy.value === null
-      ? "--"
-      : `${data.aggregation.averageAccuracy.value}%`;
+  const summaryPayload = data.summary.upsertPayload;
+  const sessionsCompleted = summaryPayload?.sessions_completed ?? 0;
+  const sentencesCompleted = summaryPayload?.sentences_completed ?? 0;
+  const averageAccuracy = summaryPayload?.average_accuracy_percent ?? null;
+  const bestAccuracy = summaryPayload?.best_accuracy_percent ?? null;
+  const currentStreakDays = data.streak.currentStreakDays;
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
@@ -56,94 +55,130 @@ export function ProgressPage({ data }: ProgressPageProps) {
         </Card>
       </section>
 
-      <section className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-        <ProgressMetric
-          label="Saved sessions"
-          note={data.aggregation.totalSessions.note}
-          value={formatMetricValue(data.aggregation.totalSessions.value)}
-        />
-        <ProgressMetric
-          label="Recent mistakes"
-          note={data.aggregation.totalMistakeCount.note}
-          value={formatMetricValue(data.aggregation.totalMistakeCount.value)}
-        />
-        <ProgressMetric
-          label="Total sentences"
-          note={data.aggregation.totalSentencesCompleted.note}
-          value={totalSentencesLabel}
-        />
-        <ProgressMetric
-          label="Average accuracy"
-          note={data.aggregation.averageAccuracy.note}
-          value={averageAccuracyLabel}
-        />
+      <section className="mt-5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm font-medium text-slate-500">Summary</p>
+            <h2 className="mt-1 text-2xl font-semibold text-slate-950">
+              Real saved progress
+            </h2>
+          </div>
+          <Badge>{formatSummaryStatus(data.summary.status)}</Badge>
+        </div>
+
+        {/* TODO: Add charts, richer analytics, Progress DNA, and recommendations in later phases. */}
+        <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-5">
+          <ProgressMetric
+            label="Sessions completed"
+            note={formatSummaryNote(data.summary.sessions.status)}
+            value={String(sessionsCompleted)}
+          />
+          <ProgressMetric
+            label="Sentences completed"
+            note={formatSummaryNote(data.summary.sessions.status)}
+            value={String(sentencesCompleted)}
+          />
+          <ProgressMetric
+            label="Average accuracy"
+            note={formatSummaryNote(data.summary.sessions.status)}
+            value={formatPercentMetric(averageAccuracy)}
+          />
+          <ProgressMetric
+            label="Best accuracy"
+            note={formatSummaryNote(data.summary.sessions.status)}
+            value={formatPercentMetric(bestAccuracy)}
+          />
+          <ProgressMetric
+            label="Current streak"
+            note={formatStreakNote(data.streak)}
+            value={`${currentStreakDays} day${currentStreakDays === 1 ? "" : "s"}`}
+          />
+        </div>
       </section>
 
-      <section className="mt-5 grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-        <Card className="bg-white/75">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-500">
-                Recent saved sessions
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-                Session history will fill in here.
-              </h2>
-            </div>
-            <Badge>{hasRecentSessions ? "Read-only" : "No data yet"}</Badge>
-          </div>
+      <section className="mt-5">
+        <div>
+          <p className="text-sm font-medium text-slate-500">Activity</p>
+          <h2 className="mt-1 text-2xl font-semibold text-slate-950">
+            Recent practice history
+          </h2>
+        </div>
 
-          {hasRecentSessions ? (
-            <div className="mt-5 space-y-3">
-              {data.aggregation.recentSessions.map((session) => (
-                <RecentSessionRow key={session.id} session={session} />
-              ))}
+        <div className="mt-5 grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+          <Card className="bg-white/75">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-500">
+                  Recent saved sessions
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-slate-950">
+                  Session history will fill in here.
+                </h2>
+              </div>
+              <Badge>{hasRecentSessions ? "Read-only" : "No data yet"}</Badge>
             </div>
-          ) : (
-            <EmptyState
-              className="mt-5"
-              description="Saved authenticated sessions can appear here once Practice Mode or Daily Workout starts writing results."
-              title="No saved sessions yet"
-            />
-          )}
-        </Card>
 
-        <Card className="bg-white/75">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-500">
-                Recent mistakes
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-                Mistake review starts simple.
-              </h2>
-            </div>
-            <Badge>
-              {data.aggregation.recentMistakes.length > 0
-                ? "Latest 5"
-                : "Empty"}
-            </Badge>
-          </div>
+            {hasRecentSessions ? (
+              <div className="mt-5 space-y-3">
+                {data.aggregation.recentSessions.map((session) => (
+                  <RecentSessionRow key={session.id} session={session} />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                className="mt-5"
+                description="Saved authenticated sessions can appear here once Practice Mode or Daily Workout starts writing results."
+                title="No saved sessions yet"
+              />
+            )}
+          </Card>
 
-          {data.aggregation.recentMistakes.length > 0 ? (
-            <div className="mt-5 space-y-3">
-              {data.aggregation.recentMistakes.map((mistake) => (
-                <RecentMistakeRow key={mistake.id} mistake={mistake} />
-              ))}
+          <Card className="bg-white/75">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-500">
+                  Recent mistakes
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-slate-950">
+                  Mistake review starts simple.
+                </h2>
+              </div>
+              <Badge>
+                {data.aggregation.recentMistakes.length > 0
+                  ? "Latest 5"
+                  : "Empty"}
+              </Badge>
             </div>
-          ) : (
-            <EmptyState
-              className="mt-5"
-              description="Mistakes will appear after authenticated practice results are persisted."
-              title="No mistakes saved yet"
-            />
-          )}
-        </Card>
+
+            {data.aggregation.recentMistakes.length > 0 ? (
+              <div className="mt-5 space-y-3">
+                {data.aggregation.recentMistakes.map((mistake) => (
+                  <RecentMistakeRow key={mistake.id} mistake={mistake} />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                className="mt-5"
+                description="Mistakes will appear after authenticated practice results are persisted."
+                title="No mistakes saved yet"
+              />
+            )}
+          </Card>
+        </div>
       </section>
 
-      <section className="mt-5 grid gap-5 md:grid-cols-2">
-        <WeakWordsCard data={data.weakness} />
-        <RepeatedMistakesCard data={data.weakness} />
+      <section className="mt-5">
+        <div>
+          <p className="text-sm font-medium text-slate-500">Weakness</p>
+          <h2 className="mt-1 text-2xl font-semibold text-slate-950">
+            Early mistake patterns
+          </h2>
+        </div>
+
+        <div className="mt-5 grid gap-5 md:grid-cols-2">
+          <WeakWordsCard data={data.weakness} />
+          <RepeatedMistakesCard data={data.weakness} />
+        </div>
       </section>
     </main>
   );
@@ -367,8 +402,8 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-function formatMetricValue(value: number | null) {
-  return value === null ? "--" : String(value);
+function formatPercentMetric(value: number | null) {
+  return value === null ? "--" : `${Math.round(value)}%`;
 }
 
 function formatStatus(status: ProgressPageData["weakness"]["status"]) {
@@ -377,4 +412,36 @@ function formatStatus(status: ProgressPageData["weakness"]["status"]) {
   }
 
   return status;
+}
+
+function formatSummaryStatus(status: ProgressPageData["summary"]["status"]) {
+  if (status === "placeholder") {
+    return "No data yet";
+  }
+
+  return status;
+}
+
+function formatSummaryNote(status: ProgressPageData["summary"]["status"]) {
+  if (status === "placeholder") {
+    return "No saved summary data yet.";
+  }
+
+  if (status === "limited") {
+    return "Calculated from bounded saved practice data.";
+  }
+
+  return "Calculated from saved practice data.";
+}
+
+function formatStreakNote(streak: ProgressPageData["streak"]) {
+  if (streak.status === "placeholder") {
+    return "No completed Daily Workout yet.";
+  }
+
+  const todayLabel = streak.isTodayCompleted
+    ? "Today is completed."
+    : "Today is not completed yet.";
+
+  return `${todayLabel} Based on recent Daily Workout history.`;
 }

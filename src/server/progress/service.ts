@@ -8,6 +8,11 @@ import {
   getProgressAggregation,
   type ProgressAggregationDto
 } from "@/server/progress/aggregation";
+import type { StreakSummaryDto } from "@/server/progress/streak";
+import {
+  getProgressSummaryFoundation,
+  type ProgressSummaryFoundationDto
+} from "@/server/progress/summary";
 import {
   getWeaknessDetection,
   type WeaknessDetectionDto
@@ -27,6 +32,8 @@ export type ProgressPageData = {
     id: string;
     onboardingCompletedAt: string | null;
   };
+  streak: StreakSummaryDto;
+  summary: ProgressSummaryFoundationDto;
   weakness: WeaknessDetectionDto;
 };
 
@@ -38,16 +45,24 @@ export async function getProgressPageData(): Promise<ProgressPageData> {
     redirect("/level");
   }
 
-  const [level, languagePair, aggregation, weakness] = await Promise.all([
-    profile.selected_level_id
-      ? getLevelById(profile.selected_level_id)
-      : Promise.resolve(null),
-    profile.selected_language_pair_id
-      ? getLanguagePairById(profile.selected_language_pair_id)
-      : Promise.resolve(null),
-    getProgressAggregation(),
-    getWeaknessDetection()
-  ]);
+// TODO:
+// Progress aggregation, summary, and weakness modules currently resolve their
+// own authenticated profile context. Future hardening should allow passing a
+// shared server-side profile context into these modules to avoid duplicate
+// auth/profile lookups on one page load.
+
+  const [level, languagePair, aggregation, summary, weakness] =
+    await Promise.all([
+      profile.selected_level_id
+        ? getLevelById(profile.selected_level_id)
+        : Promise.resolve(null),
+      profile.selected_language_pair_id
+        ? getLanguagePairById(profile.selected_language_pair_id)
+        : Promise.resolve(null),
+      getProgressAggregation(),
+      getProgressSummaryFoundation(),
+      getWeaknessDetection()
+    ]);
 
   return {
     aggregation,
@@ -58,6 +73,8 @@ export async function getProgressPageData(): Promise<ProgressPageData> {
       id: profile.id,
       onboardingCompletedAt: profile.onboarding_completed_at
     },
+    streak: summary.streak,
+    summary,
     weakness
   };
 }
