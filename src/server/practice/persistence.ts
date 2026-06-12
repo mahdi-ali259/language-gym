@@ -8,6 +8,7 @@ import {
   getCurrentProfile,
   requireCurrentUser
 } from "@/server/profile/service";
+import { updateUserProgressSummaryAfterSavedSession } from "@/server/progress/summary";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import type { Database } from "@/types/database";
 
@@ -45,6 +46,7 @@ export type SavedPracticeSessionResult = {
   attemptCount: number;
   mistakeCount: number;
   practiceSessionId: string;
+  progressSummaryStatus: "failed" | "skipped" | "updated";
 };
 
 const uuidPattern =
@@ -147,11 +149,28 @@ export async function savePracticeSessionResult({
     }
   }
 
+  const progressSummaryStatus = await updateProgressSummarySafely();
+
   return {
     attemptCount: savedAttempts.length,
     mistakeCount: mistakes.length,
-    practiceSessionId: savedSession.id
+    practiceSessionId: savedSession.id,
+    progressSummaryStatus
   };
+}
+
+async function updateProgressSummarySafely(): Promise<
+  SavedPracticeSessionResult["progressSummaryStatus"]
+> {
+  try {
+    const result = await updateUserProgressSummaryAfterSavedSession();
+
+    return result.status;
+  } catch {
+    // Raw practice rows are the source of truth. A later recalculation/RPC phase
+    // can repair summaries if this bounded update fails after the raw save.
+    return "failed";
+  }
 }
 
 export function mapPracticeSessionResultToRecords({

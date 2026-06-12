@@ -29,6 +29,8 @@ type SentenceAttemptSummaryRow = Pick<
 >;
 type UserProgressSummaryInsert =
   Database["public"]["Tables"]["user_progress_summaries"]["Insert"];
+type UserProgressSummaryUpdate =
+  Database["public"]["Tables"]["user_progress_summaries"]["Update"];
 
 export type ProgressSummaryStatus = "limited" | "placeholder" | "ready";
 
@@ -67,6 +69,17 @@ export type ProgressSummaryFoundationDto = {
   status: ProgressSummaryStatus;
   upsertPayload: UserProgressSummaryInsert | null;
 };
+
+export type ProgressSummaryUpdateResult =
+  | {
+      foundationStatus: ProgressSummaryStatus;
+      status: "skipped";
+    }
+  | {
+      foundationStatus: ProgressSummaryStatus;
+      status: "updated";
+      summaryId: string;
+    };
 
 type ProgressSummaryContext = {
   languagePairId: string;
@@ -112,6 +125,63 @@ export async function getProgressSummaryFoundation(): Promise<ProgressSummaryFou
       sessionStatus: sessionMetrics.status
     }),
     upsertPayload
+  };
+}
+
+export async function updateUserProgressSummaryAfterSavedSession(): Promise<ProgressSummaryUpdateResult> {
+  const foundation = await getProgressSummaryFoundation();
+
+  if (!foundation.upsertPayload) {
+    return {
+      foundationStatus: foundation.status,
+      status: "skipped"
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const existingSummary = await getExistingProgressSummary({
+    languagePairId: foundation.upsertPayload.language_pair_id,
+    levelId: foundation.upsertPayload.level_id ?? null,
+    profileId: foundation.upsertPayload.profile_id
+  });
+
+  // TODO:
+  // Move this manual update-or-insert flow into a database RPC/transaction
+  // before high-concurrency production use. Raw practice rows remain the
+  // source of truth; this summary can be safely recalculated if needed.
+  if (existingSummary) {
+    const { data, error } = await supabase
+      .from("user_progress_summaries")
+      .update(getUserProgressSummaryUpdatePayload(foundation.upsertPayload))
+      .eq("id", existingSummary.id)
+      .select("id")
+      .single();
+
+    if (error) {
+      throw new Error("Progress summary update failed.");
+    }
+
+    return {
+      foundationStatus: foundation.status,
+      status: "updated",
+      summaryId: data.id
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("user_progress_summaries")
+    .insert(foundation.upsertPayload)
+    .select("id")
+    .single();
+
+  if (error) {
+    throw new Error("Progress summary update failed.");
+  }
+
+  return {
+    foundationStatus: foundation.status,
+    status: "updated",
+    summaryId: data.id
   };
 }
 
@@ -198,11 +268,11 @@ export function prepareUserProgressSummaryUpsertPayload({
     return null;
   }
 
-// TODO:
-// Decide the canonical source for audio replay totals before wiring this
-// payload into real upserts. If practice_sessions.audio_replay_count becomes
-// a session aggregate, do not add sentence_attempts.audio_replay_count here
-// or replay counts will be double-counted.
+  // TODO:
+  // Decide the canonical source for audio replay totals before expanding this
+  // summary. If practice_sessions.audio_replay_count becomes a session
+  // aggregate, do not add sentence_attempts.audio_replay_count here or replay
+  // counts will be double-counted.
 
   return {
     average_accuracy_percent:
@@ -218,6 +288,51 @@ export function prepareUserProgressSummaryUpsertPayload({
     total_audio_replays:
       sessions.totalAudioReplays + attempts.totalAudioReplays,
     total_mistakes: mistakes.totalMistakes
+  };
+}
+
+// TODO:
+// This manual lookup-then-insert flow can race under concurrent saves.
+// Future hardening should use a database RPC or an upsert strategy compatible
+// with the coalesced level_id uniqueness rule.
+
+async function getExistingProgressSummary({
+  languagePairId,
+  levelId,
+  profileId
+}: ProgressSummaryContext) {
+  const supabase = await createSupabaseServerClient();
+  let query = supabase
+    .from("user_progress_summaries")
+    .select("id")
+    .eq("profile_id", profileId)
+    .eq("language_pair_id", languagePairId)
+    .limit(1);
+
+  query = levelId ? query.eq("level_id", levelId) : query.is("level_id", null);
+
+  const { data, error } = await query.maybeSingle();
+
+  if (error) {
+    throw new Error("Progress summary lookup failed.");
+  }
+
+  return data;
+}
+
+function getUserProgressSummaryUpdatePayload(
+  payload: UserProgressSummaryInsert
+): UserProgressSummaryUpdate {
+  return {
+    average_accuracy_percent: payload.average_accuracy_percent,
+    average_wpm: payload.average_wpm,
+    best_accuracy_percent: payload.best_accuracy_percent,
+    last_workout_date: payload.last_workout_date,
+    sentences_completed: payload.sentences_completed,
+    sessions_completed: payload.sessions_completed,
+    total_audio_replays: payload.total_audio_replays,
+    total_mistakes: payload.total_mistakes,
+    updated_at: new Date().toISOString()
   };
 }
 

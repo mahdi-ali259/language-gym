@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Phase 26 prepares the server-side foundation for maintaining `user_progress_summaries` later. It does not update summaries automatically and does not change the current result save flow.
+Phase 26 prepared the server-side foundation for maintaining `user_progress_summaries`. Phase 27 wires a conservative server-side summary update after authenticated raw result persistence.
 
 The implementation lives in `src/server/progress/summary.ts`.
 
@@ -12,7 +12,9 @@ The implementation lives in `src/server/progress/summary.ts`.
 - Requires completed onboarding.
 - Reads bounded saved practice data for the current selected language pair and level.
 - Calculates conservative session, attempt, and mistake summary DTOs.
-- Prepares a future `user_progress_summaries` upsert payload.
+- Prepares a `user_progress_summaries` write payload.
+- Updates an existing summary row or inserts a new one after authenticated Daily Workout and Practice Mode saves.
+- Keeps raw `practice_sessions`, `sentence_attempts`, and `attempt_mistakes` as the source of truth.
 
 ## Tables Read
 
@@ -20,9 +22,11 @@ The implementation lives in `src/server/progress/summary.ts`.
 - `sentence_attempts`
 - `attempt_mistakes`
 
-## Future Write Target
+## Write Target
 
 - `user_progress_summaries`
+
+The write is server-side only and uses the current authenticated user's profile context. Client callers never provide `profile_id`.
 
 ## Bounds
 
@@ -34,19 +38,19 @@ These limits prevent accidental heavy reads. Lifetime exact summaries should eve
 
 ## Deferred
 
-- Automatic summary updates after saving a session.
 - Database triggers.
 - RPC functions.
+- Atomic raw-save-plus-summary-write transactions.
 - Streak, XP, achievements, and charts.
 - Progress DNA and AI analytics.
 - Dashboard or Progress page redesign.
 
-## Future Wiring TODO
+## Wiring Notes
 
-When raw persistence is stable, a future phase can call the summary module after `savePracticeSessionResult`. That phase should decide whether to:
+`savePracticeSessionResult` calls the summary update after raw practice rows are saved. If the summary update fails, the raw save is still treated as successful because raw rows remain authoritative and the summary can be recalculated.
 
-- Upsert directly through a server action with RLS-compatible policies.
+The current write path manually looks up an existing summary row and then updates or inserts. A future hardening phase should decide whether to:
+
 - Use a dedicated database RPC for atomic session save plus summary update.
 - Recalculate summaries asynchronously after raw writes.
-
-The current module intentionally prepares payloads only; it does not write them.
+- Add idempotency/correlation support to avoid race conditions during repeated or concurrent saves.

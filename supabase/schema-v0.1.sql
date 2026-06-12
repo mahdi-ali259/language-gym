@@ -539,6 +539,29 @@ create policy "Users can read own progress summaries"
     )
   );
 
+create policy "Users can insert own progress summaries"
+  on public.user_progress_summaries
+  for insert
+  with check (
+    profile_id in (
+      select id from public.profiles where auth_user_id = auth.uid()
+    )
+  );
+
+create policy "Users can update own progress summaries"
+  on public.user_progress_summaries
+  for update
+  using (
+    profile_id in (
+      select id from public.profiles where auth_user_id = auth.uid()
+    )
+  )
+  with check (
+    profile_id in (
+      select id from public.profiles where auth_user_id = auth.uid()
+    )
+  );
+
 create policy "Users can read own access plan"
   on public.user_access_plans
   for select
@@ -548,9 +571,8 @@ create policy "Users can read own access plan"
     )
   );
 
--- Insert/update policies for progress summaries and access plans may be
--- implemented in a later backend/API phase to keep aggregation and entitlement
--- changes server-controlled.
+-- Insert/update policies for access plans may be implemented in a later
+-- backend/API phase to keep entitlement changes server-controlled.
 
 -- Optional conceptual seed examples only. Do not run blindly.
 -- insert into public.languages (code, name, native_name, text_direction)
