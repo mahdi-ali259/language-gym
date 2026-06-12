@@ -304,6 +304,58 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      user_progress_summaries: {
+        Row: {
+          average_accuracy_percent: number | null;
+          average_wpm: number | null;
+          best_accuracy_percent: number | null;
+          created_at: string;
+          current_streak_days: number;
+          id: string;
+          language_pair_id: string;
+          last_workout_date: string | null;
+          level_id: string | null;
+          profile_id: string;
+          sentences_completed: number;
+          sessions_completed: number;
+          total_audio_replays: number;
+          total_mistakes: number;
+          updated_at: string;
+        };
+        Insert: {
+          average_accuracy_percent?: number | null;
+          average_wpm?: number | null;
+          best_accuracy_percent?: number | null;
+          created_at?: string;
+          current_streak_days?: number;
+          id?: string;
+          language_pair_id: string;
+          last_workout_date?: string | null;
+          level_id?: string | null;
+          profile_id: string;
+          sentences_completed?: number;
+          sessions_completed?: number;
+          total_audio_replays?: number;
+          total_mistakes?: number;
+          updated_at?: string;
+        };
+        Update: {
+          average_accuracy_percent?: number | null;
+          average_wpm?: number | null;
+          best_accuracy_percent?: number | null;
+          current_streak_days?: number;
+          language_pair_id?: string;
+          last_workout_date?: string | null;
+          level_id?: string | null;
+          profile_id?: string;
+          sentences_completed?: number;
+          sessions_completed?: number;
+          total_audio_replays?: number;
+          total_mistakes?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
