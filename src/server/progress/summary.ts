@@ -4,6 +4,8 @@ import {
   getCurrentProfile,
   requireCurrentUser
 } from "@/server/profile/service";
+import type { StreakSummaryDto } from "@/server/progress/streak";
+import { getStreakFoundation } from "@/server/progress/streak";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import type { Database } from "@/types/database";
 
@@ -67,6 +69,7 @@ export type ProgressSummaryFoundationDto = {
   };
   sessions: SessionSummaryMetricsDto;
   status: ProgressSummaryStatus;
+  streak: StreakSummaryDto;
   upsertPayload: UserProgressSummaryInsert | null;
 };
 
@@ -104,11 +107,13 @@ export async function getProgressSummaryFoundation(): Promise<ProgressSummaryFou
   const sessionMetrics = calculateSummaryFromPracticeSessions(sessions);
   const attemptMetrics = calculateSummaryFromSentenceAttempts(attempts);
   const mistakeMetrics = calculateTotalMistakesFromAttemptMistakes(mistakes);
+  const streak = await getStreakFoundation();
   const upsertPayload = prepareUserProgressSummaryUpsertPayload({
     attempts: attemptMetrics,
     context,
     mistakes: mistakeMetrics,
-    sessions: sessionMetrics
+    sessions: sessionMetrics,
+    streak
   });
 
   return {
@@ -124,6 +129,7 @@ export async function getProgressSummaryFoundation(): Promise<ProgressSummaryFou
       mistakeStatus: mistakeMetrics.status,
       sessionStatus: sessionMetrics.status
     }),
+    streak,
     upsertPayload
   };
 }
@@ -253,12 +259,14 @@ export function prepareUserProgressSummaryUpsertPayload({
   attempts,
   context,
   mistakes,
-  sessions
+  sessions,
+  streak
 }: {
   attempts: AttemptSummaryMetricsDto;
   context: ProgressSummaryContext;
   mistakes: MistakeSummaryMetricsDto;
   sessions: SessionSummaryMetricsDto;
+  streak: StreakSummaryDto;
 }): UserProgressSummaryInsert | null {
   if (
     sessions.sessionsCompleted === 0 &&
@@ -273,14 +281,21 @@ export function prepareUserProgressSummaryUpsertPayload({
   // summary. If practice_sessions.audio_replay_count becomes a session
   // aggregate, do not add sentence_attempts.audio_replay_count here or replay
   // counts will be double-counted.
+  //
+  // TODO:
+  // Streak values currently use the bounded daily workout streak foundation.
+  // Move exact lifetime streak handling into an RPC/materialized summary once
+  // product timezone and concurrency/idempotency rules are finalized.
 
   return {
     average_accuracy_percent:
       sessions.averageAccuracyPercent ?? attempts.averageAccuracyPercent,
     average_wpm: sessions.averageWpm,
     best_accuracy_percent: sessions.bestAccuracyPercent,
+    current_streak_days: streak.summaryPayload?.current_streak_days ?? 0,
     language_pair_id: context.languagePairId,
-    last_workout_date: sessions.lastWorkoutDate,
+    last_workout_date:
+      streak.summaryPayload?.last_workout_date ?? sessions.lastWorkoutDate,
     level_id: context.levelId,
     profile_id: context.profileId,
     sentences_completed: sessions.totalSentencesCompleted,
@@ -327,6 +342,7 @@ function getUserProgressSummaryUpdatePayload(
     average_accuracy_percent: payload.average_accuracy_percent,
     average_wpm: payload.average_wpm,
     best_accuracy_percent: payload.best_accuracy_percent,
+    current_streak_days: payload.current_streak_days,
     last_workout_date: payload.last_workout_date,
     sentences_completed: payload.sentences_completed,
     sessions_completed: payload.sessions_completed,

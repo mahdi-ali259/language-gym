@@ -14,6 +14,7 @@ The implementation lives in `src/server/progress/summary.ts`.
 - Calculates conservative session, attempt, and mistake summary DTOs.
 - Prepares a `user_progress_summaries` write payload.
 - Updates an existing summary row or inserts a new one after authenticated Daily Workout and Practice Mode saves.
+- Includes Daily Workout streak values from the streak foundation in `current_streak_days` and `last_workout_date`.
 - Keeps raw `practice_sessions`, `sentence_attempts`, and `attempt_mistakes` as the source of truth.
 
 ## Tables Read
@@ -21,6 +22,8 @@ The implementation lives in `src/server/progress/summary.ts`.
 - `practice_sessions`
 - `sentence_attempts`
 - `attempt_mistakes`
+
+Streak values are calculated from completed authenticated Daily Workout rows in `practice_sessions`.
 
 ## Write Target
 
@@ -33,6 +36,7 @@ The write is server-side only and uses the current authenticated user's profile 
 - Practice sessions: latest 500 rows for the selected profile, language pair, and level.
 - Sentence attempts: latest 1000 rows linked to the bounded session set.
 - Mistakes: count scoped to the bounded attempt set.
+- Daily Workout streak sessions: latest 120 completed Daily Workout rows for the selected profile.
 
 These limits prevent accidental heavy reads. Lifetime exact summaries should eventually move to a database RPC, background job, materialized summary, or transactional update that runs alongside raw result persistence.
 
@@ -41,7 +45,7 @@ These limits prevent accidental heavy reads. Lifetime exact summaries should eve
 - Database triggers.
 - RPC functions.
 - Atomic raw-save-plus-summary-write transactions.
-- Streak, XP, achievements, and charts.
+- Exact lifetime streak calculation, product timezone support, XP, achievements, and charts.
 - Progress DNA and AI analytics.
 - Dashboard or Progress page redesign.
 

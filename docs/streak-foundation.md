@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Phase 28 adds a server-side foundation for Daily Workout streak logic. It does not wire streak updates into persistence, progress summaries, dashboard UI, or Progress page UI.
+Phase 28 added a server-side foundation for Daily Workout streak logic. Phase 29 wires the streak payload into progress summary updates. It does not add dashboard UI, Progress page UI, XP, badges, or achievements.
 
 The implementation lives in `src/server/progress/streak.ts`.
 
@@ -15,7 +15,8 @@ The implementation lives in `src/server/progress/streak.ts`.
 - Calculates whether today has a completed workout.
 - Calculates the current streak days from recent completed workout dates.
 - Calculates the latest workout date.
-- Prepares a future `user_progress_summaries` streak payload.
+- Prepares a `user_progress_summaries` streak payload.
+- Provides streak values to the existing progress summary update flow.
 
 ## Table Read
 
@@ -29,8 +30,6 @@ This bound protects the app from accidental unlimited reads. It is enough for a 
 
 ## Deferred
 
-- Wiring streak updates into `savePracticeSessionResult`.
-- Writing `current_streak_days` or `last_workout_date` to `user_progress_summaries`.
 - Product timezone support.
 - Exact lifetime streak calculation.
 - Database RPC/materialized summary optimization.
@@ -40,5 +39,4 @@ This bound protects the app from accidental unlimited reads. It is enough for a 
 
 - Add profile-level timezone support before treating a calendar day as product-canonical.
 - Move exact lifetime streak calculations to a database RPC, background job, or summary table update.
-- Integrate streak payloads into `user_progress_summaries` after the current summary write path is hardened.
-- Add idempotency/concurrency protections when streak writes are introduced.
+- Add idempotency/concurrency protections around raw persistence plus summary/streak updates.
